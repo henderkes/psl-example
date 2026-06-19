@@ -3,19 +3,16 @@
 declare(strict_types=1);
 
 /**
- * GENERIC variant: application code written with native reified generics
- * (turbofish construction `new Vector::<array>(...)`, native generic type
- * hints `Vector<array>`/`Map<string,int>`/`Option<array>`, and a user-defined
- * generic class Listing<T>), running on the *native-generics* PSL
- * (the reified-generics build).
+ * REGULAR variant: plain PHP application code on the *docblock-generics* PSL
+ * (the `next` branch, before the reified-generics conversion). No native
+ * generic syntax anywhere — types live in docblocks only.
  */
 
-const BLOG_VARIANT = 'generic';
-const BLOG_VARIANT_LABEL = 'native generics &middot; reified code';
+const BLOG_VARIANT = 'regular';
+const BLOG_VARIANT_LABEL = 'docblock PSL &middot; plain code';
 
 require __DIR__ . '/../vendor/autoload.php';
 
-require __DIR__ . '/Listing.php';
 require __DIR__ . '/Types.php';
 require __DIR__ . '/Repository.php';
 require __DIR__ . '/View.php';

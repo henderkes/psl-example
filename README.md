@@ -15,29 +15,27 @@ Two branches, same app, different stack:
 `composer.json` on each branch pins the library to an exact git commit, so the
 two branches install genuinely different builds of PSL.
 
-## This branch: `generic`
+## This branch: `regular`
 
-The application code uses **native reified generics**, which requires a PHP
-build that implements the
-[reified-generics RFC](https://wiki.php.net/rfc/reified-generics). On a stock PHP
-the source won't parse — check out the `regular` branch for that. The pinned
-library commit (`3410ae4e`) is php-standard-library fully converted to native
-generic syntax.
+Plain PHP application code on the **docblock-generics** PSL — the library exactly
+as it was *before* the reified-generics conversion (pinned commit `7635127f`).
+There is no native generic syntax anywhere; all type information lives in
+docblocks. This branch runs on a stock PHP 8.4+/8.5 build (no special engine
+required).
 
 ## Run it
 
 ```bash
 composer install                       # pulls PSL at the pinned commit
 php db/seed.php                         # build db/blog.sqlite (deterministic)
-php bin/server.php 127.0.0.1 8099       # PSL async HTTP server
-curl http://127.0.0.1:8099/
+php bin/server.php 127.0.0.1 8100       # PSL async HTTP server
+curl http://127.0.0.1:8100/
 ```
 
 ## Layout
 
 ```
 src/Types.php       PSL Type shapes for each model (Type coercion per row)
-src/Listing.php     a user-defined reified generic: Listing<T>  (generic branch only)
 src/Repository.php  SQLite reads -> Type coerce -> PSL Collections/Option
 src/View.php        HTML/JSON rendering with Str/Vec
 src/Kernel.php      handle(Request): Response — the one request pipeline

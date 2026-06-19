@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3c2c26b2de744cbd6a1b1d8982d6b76b",
+    "content-hash": "d7c4b395ffd5eaefc7bab1ee81af378f",
     "packages": [
         {
             "name": "php-standard-library/php-standard-library",
-            "version": "dev-reified-generics",
+            "version": "dev-next",
             "source": {
                 "type": "git",
                 "url": "https://github.com/henderkes/php-standard-library.git",
-                "reference": "3410ae4eb756c5a600995935b0b07f4e86cff33c"
+                "reference": "7635127ffd9faf645260562fe861959d508277cb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/henderkes/php-standard-library/zipball/3410ae4eb756c5a600995935b0b07f4e86cff33c",
-                "reference": "3410ae4eb756c5a600995935b0b07f4e86cff33c",
+                "url": "https://api.github.com/repos/henderkes/php-standard-library/zipball/7635127ffd9faf645260562fe861959d508277cb",
+                "reference": "7635127ffd9faf645260562fe861959d508277cb",
                 "shasum": ""
             },
             "require": {
@@ -120,6 +120,7 @@
                 "php-standard-library/phpstan-extension": "PHPStan integration",
                 "php-standard-library/psalm-plugin": "Psalm integration"
             },
+            "default-branch": true,
             "bin": [
                 "bin/psl"
             ],
@@ -392,7 +393,7 @@
             ],
             "description": "PHP Standard Library",
             "support": {
-                "source": "https://github.com/henderkes/php-standard-library/tree/reified-generics"
+                "source": "https://github.com/henderkes/php-standard-library/tree/next"
             },
             "funding": [
                 {
@@ -404,7 +405,7 @@
                     "url": "https://github.com/veewee"
                 }
             ],
-            "time": "2026-06-19T11:52:56+00:00"
+            "time": "2026-06-12T21:17:39+00:00"
         },
         {
             "name": "revolt/event-loop",

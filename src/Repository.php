@@ -12,10 +12,8 @@ use Psl\Option;
 use Psl\Vec;
 
 /**
- * GENERIC variant of the repository. Return types are native generics
- * (`Vector<array>`, `Option<array>`, `Map<string,int>`, `Listing<array>`) and
- * collections are built with turbofish so the instances carry real type
- * arguments enforced by the engine (`new Vector::<array>(...)`).
+ * Reads blog data from SQLite and returns it as PSL collections of type-coerced
+ * rows. Exercises generics via Type coercion + Vector/Map + Option + Dict.
  */
 final class Repository
 {
@@ -23,17 +21,8 @@ final class Repository
     {
     }
 
-    /** @param list<array> $rows */
-    private function coerceRows(array $rows, \Psl\Type\TypeInterface $type): Vector<array>
-    {
-        $coerced = Vec\map($rows, static fn(array $r): array => $type->coerce($r));
-
-        // direct turbofish construction => a genuine Vector<array> (the static
-        // fromArray() factory would hand back Vector<mixed>).
-        return new Vector::<array>($coerced);
-    }
-
-    public function recentPosts(int $limit = 20): Vector<array>
+    /** @return Vector of coerced post rows (each an array), newest first. */
+    public function recentPosts(int $limit = 20): Vector
     {
         $rows = $this->pdo->query(
             'SELECT p.*, a.name AS author_name,
@@ -42,10 +31,12 @@ final class Repository
              ORDER BY p.published_at DESC LIMIT ' . $limit,
         )->fetchAll();
 
-        return $this->coerceRows($rows, Types::post());
+        $post = Types::post();
+        $coerced = Vec\map($rows, static fn(array $r): array => $post->coerce($r));
+
+        return Vector::fromArray($coerced);
     }
 
-    /** @return Option\Option<array> (runtime is Option<mixed>: Option's ctor is private) */
     public function findBySlug(string $slug): Option\Option
     {
         $stmt = $this->pdo->prepare(
@@ -56,30 +47,42 @@ final class Repository
         $stmt->execute([$slug]);
         $row = $stmt->fetch();
 
-        $value = $row === false ? null : Types::post()->coerce($row);
+        if ($row === false) {
+            return Option\none();
+        }
 
-        return Option\from_nullable::<array>($value);
+        return Option\some(Types::post()->coerce($row));
     }
 
-    public function commentsFor(int $postId): Vector<array>
-    {
-        $stmt = $this->pdo->prepare('SELECT * FROM comments WHERE post_id = ? ORDER BY published_at ASC');
-        $stmt->execute([$postId]);
-
-        return $this->coerceRows($stmt->fetchAll(), Types::comment());
-    }
-
-    public function tagsFor(int $postId): Vector<array>
+    /** @return Vector of coerced comment rows for a post. */
+    public function commentsFor(int $postId): Vector
     {
         $stmt = $this->pdo->prepare(
-            'SELECT t.* FROM tags t JOIN post_tags pt ON pt.tag_id = t.id WHERE pt.post_id = ? ORDER BY t.name',
+            'SELECT * FROM comments WHERE post_id = ? ORDER BY published_at ASC',
         );
         $stmt->execute([$postId]);
+        $comment = Types::comment();
+        $rows = Vec\map($stmt->fetchAll(), static fn(array $r): array => $comment->coerce($r));
 
-        return $this->coerceRows($stmt->fetchAll(), Types::tag());
+        return Vector::fromArray($rows);
     }
 
-    public function postsByTag(string $tag): Listing<array>
+    /** @return Vector of coerced tag rows for a post. */
+    public function tagsFor(int $postId): Vector
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT t.* FROM tags t JOIN post_tags pt ON pt.tag_id = t.id
+             WHERE pt.post_id = ? ORDER BY t.name',
+        );
+        $stmt->execute([$postId]);
+        $tag = Types::tag();
+        $rows = Vec\map($stmt->fetchAll(), static fn(array $r): array => $tag->coerce($r));
+
+        return Vector::fromArray($rows);
+    }
+
+    /** @return Vector of coerced post rows carrying a given tag. */
+    public function postsByTag(string $tag): Vector
     {
         $stmt = $this->pdo->prepare(
             'SELECT p.*, a.name AS author_name,
@@ -91,25 +94,37 @@ final class Repository
              WHERE t.name = ? ORDER BY p.published_at DESC',
         );
         $stmt->execute([$tag]);
+        $post = Types::post();
+        $rows = Vec\map($stmt->fetchAll(), static fn(array $r): array => $post->coerce($r));
 
-        return new Listing::<array>($this->coerceRows($stmt->fetchAll(), Types::post()), 'Posts tagged #' . $tag);
+        return Vector::fromArray($rows);
     }
 
-    public function search(string $term): Listing<array>
+    /** @return Vector of coerced post rows matching a search term in title/summary. */
+    public function search(string $term): Vector
     {
         $stmt = $this->pdo->prepare(
             'SELECT p.*, a.name AS author_name,
                     (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
              FROM posts p JOIN authors a ON a.id = p.author_id
-             WHERE p.title LIKE ? OR p.summary LIKE ? ORDER BY p.published_at DESC',
+             WHERE p.title LIKE ? OR p.summary LIKE ?
+             ORDER BY p.published_at DESC',
         );
         $like = '%' . $term . '%';
         $stmt->execute([$like, $like]);
+        $post = Types::post();
+        $rows = Vec\map($stmt->fetchAll(), static fn(array $r): array => $post->coerce($r));
 
-        return new Listing::<array>($this->coerceRows($stmt->fetchAll(), Types::post()), 'Search: ' . $term);
+        return Vector::fromArray($rows);
     }
 
-    public function tagCloud(): Map<string, int>
+    /**
+     * Tag cloud: tag name => post count, as a PSL Map. Uses Dict\group_by over
+     * the join rows to count, exercising the keyed-collection generics.
+     *
+     * @return Map of tag-name => count
+     */
+    public function tagCloud(): Map
     {
         $rows = $this->pdo->query(
             'SELECT t.name AS name FROM tags t JOIN post_tags pt ON pt.tag_id = t.id',
@@ -118,6 +133,6 @@ final class Repository
         $grouped = Dict\group_by($rows, static fn(array $r): string => $r['name']);
         $counts = Dict\map($grouped, static fn(array $group): int => \Psl\Iter\count($group));
 
-        return new Map::<string, int>($counts);
+        return Map::fromArray($counts);
     }
 }

@@ -76,8 +76,9 @@ final class Kernel
 
         if (Str\starts_with($path, '/tag/')) {
             $tag = Str\after($path, '/tag/') ?? '';
+            $posts = $this->repo->postsByTag($tag);
 
-            return new Response(200, View::listing($this->repo->postsByTag($tag)));
+            return new Response(200, View::list('Posts tagged #' . $tag, $posts));
         }
 
         if ($path === '/search') {
@@ -85,8 +86,9 @@ final class Kernel
             if ($request->query !== '' && Str\contains($request->query, 'q=')) {
                 $term = urldecode(Str\after($request->query, 'q=') ?? '');
             }
+            $posts = $this->repo->search($term);
 
-            return new Response(200, View::listing($this->repo->search($term)));
+            return new Response(200, View::list('Search: ' . $term, $posts));
         }
 
         return new Response(404, View::notFound($path));
