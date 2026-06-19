@@ -1,0 +1,22 @@
+{
+    "name": "henderkes/psl-example",
+    "description": "Symfony-demo-style blog built on php-standard-library — GENERIC variant: native reified generics in both the library and the application code.",
+    "type": "project",
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "repositories": [
+        { "type": "vcs", "url": "https://github.com/henderkes/php-standard-library" }
+    ],
+    "require": {
+        "php": ">=8.4",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
+        "php-standard-library/php-standard-library": "dev-reified-generics#3410ae4eb756c5a600995935b0b07f4e86cff33c"
+    },
+    "config": {
+        "platform": { "php": "8.5.0" },
+        "sort-packages": true,
+        "allow-plugins": { "*": true }
+    }
+}
