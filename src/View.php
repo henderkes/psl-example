@@ -96,9 +96,9 @@ CSS;
         return Str\slice($ts, 0, 16);
     }
 
-    public static function home(Vector<array> $posts, Map<string, int> $tagCloud): string
+    public static function home(Paginated<array> $page, Counts<string> $tagCloud): string
     {
-        $items = Vec\map($posts->toArray(), static function (array $p): string {
+        $items = Vec\map($page->rows(), static function (array $p): string {
             return Str\format(
                 "<article class=\"card\"><h2><a href=\"/post/%s\">%s</a></h2>"
                 . "<p class=\"meta\">by <b>%s</b> &middot; %s &middot; %d comments</p>"
@@ -119,10 +119,22 @@ CSS;
 
         $sidebar = '<aside><div class="box"><h3>About</h3>'
             . '<p style="margin:0;color:#41525f">A Symfony-demo-style blog rendered entirely with '
-            . '<b>php-standard-library</b> — Type coercion, Collections, Option and Vec/Dict drive every page.</p></div>'
-            . '<div class="box"><h3>Tags</h3><div class="cloud">' . Str\join($cloudParts, ' ') . '</div></div></aside>';
+            . '<b>php-standard-library</b>. Every page flows through native generics: '
+            . 'Paginated&lt;array&gt;, Listing&lt;array&gt;, Counts&lt;string&gt; and PSL Vector/Map/Option.</p></div>'
+            . Str\format(
+                '<div class="box"><h3>Tags &middot; %d uses</h3><div class="cloud">%s</div></div></aside>',
+                $tagCloud->total(),
+                Str\join($cloudParts, ' '),
+            );
 
-        return self::layout('Recent posts', '<h1>Recent posts</h1>' . Str\join($items, "\n"), $sidebar);
+        $heading = Str\format(
+            '<h1>Recent posts</h1><p class="meta">page %d of %d &middot; %d posts total</p>',
+            $page->page,
+            $page->pages(),
+            $page->total,
+        );
+
+        return self::layout('Recent posts', $heading . Str\join($items, "\n"), $sidebar);
     }
 
     public static function post(array $post, Vector<array> $comments, Vector<array> $tags): string

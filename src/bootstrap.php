@@ -15,7 +15,7 @@ const BLOG_VARIANT_LABEL = 'native generics &middot; reified code';
 
 require __DIR__ . '/../vendor/autoload.php';
 
-require __DIR__ . '/Listing.php';
+require __DIR__ . '/Generics.php';
 require __DIR__ . '/Types.php';
 require __DIR__ . '/Repository.php';
 require __DIR__ . '/View.php';

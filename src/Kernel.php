@@ -48,10 +48,10 @@ final class Kernel
         $path = $request->path;
 
         if ($path === '/') {
-            $posts = $this->repo->recentPosts(20);
+            $page = $this->repo->recentPage(1, 20);
             $cloud = $this->repo->tagCloud();
 
-            return new Response(200, View::home($posts, $cloud));
+            return new Response(200, View::home($page, $cloud));
         }
 
         if ($path === '/api/posts') {

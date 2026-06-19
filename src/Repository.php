@@ -45,6 +45,23 @@ final class Repository
         return $this->coerceRows($rows, Types::post());
     }
 
+    public function recentPage(int $page = 1, int $perPage = 20): Paginated<array>
+    {
+        $total = (int) $this->pdo->query('SELECT COUNT(*) FROM posts')->fetchColumn();
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->pdo->query(
+            'SELECT p.*, a.name AS author_name,
+                    (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
+             FROM posts p JOIN authors a ON a.id = p.author_id
+             ORDER BY p.published_at DESC LIMIT ' . $perPage . ' OFFSET ' . $offset,
+        )->fetchAll();
+
+        // turbofish so the page carries a genuine Vector<array>
+        $items = new Vector::<array>(Vec\map($rows, static fn(array $r): array => Types::post()->coerce($r)));
+
+        return new Paginated::<array>($items, $total, $page, $perPage);
+    }
+
     /** @return Option\Option<array> (runtime is Option<mixed>: Option's ctor is private) */
     public function findBySlug(string $slug): Option\Option
     {
@@ -109,7 +126,7 @@ final class Repository
         return new Listing::<array>($this->coerceRows($stmt->fetchAll(), Types::post()), 'Search: ' . $term);
     }
 
-    public function tagCloud(): Map<string, int>
+    public function tagCloud(): Counts<string>
     {
         $rows = $this->pdo->query(
             'SELECT t.name AS name FROM tags t JOIN post_tags pt ON pt.tag_id = t.id',
@@ -118,6 +135,7 @@ final class Repository
         $grouped = Dict\group_by($rows, static fn(array $r): string => $r['name']);
         $counts = Dict\map($grouped, static fn(array $group): int => \Psl\Iter\count($group));
 
-        return new Map::<string, int>($counts);
+        // a native Map<string,int> wrapped in the generic Counts<string>
+        return new Counts::<string>(new Map::<string, int>($counts));
     }
 }
