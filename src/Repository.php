@@ -8,14 +8,17 @@ use PDO;
 use Psl\Collection\Map;
 use Psl\Collection\Vector;
 use Psl\Dict;
+use Psl\Iter;
 use Psl\Option;
+use Psl\Type\TypeInterface;
 use Psl\Vec;
 
 /**
- * REGULAR variant of the repository - a structural mirror of the generic
- * (`Vector`, `Option<array>`, `Map`, `Listing`) and
- * collections are built with turbofish so the instances carry real type
- * arguments enforced by the engine (`Vector::fromArray(...)`).
+ * REGULAR variant: structural mirror of the generic repository, generics removed
+ * as possible: every collection is built with turbofish, every PSL function call
+ * carries explicit type arguments (`Vec\map::<int, array, array>`,
+ * `Dict\group_by::<string, array>`, `Iter\count::<array>`), and row coercion runs
+ * through the generic `Pipeline<T>` (whose own `map<Tu>` is a generic method).
  */
 final class Repository
 {
@@ -23,36 +26,42 @@ final class Repository
     {
     }
 
-    /** @param list<array> $rows */
-    private function coerceRows(array $rows, \Psl\Type\TypeInterface $type): Vector
+    /**
+     * Coerce raw rows through a fully-typed generic pipeline:
+     * `Pipeline::from::<array>` -> `->map::<array>` (a generic method turbofishing
+     * `Vec\map::<int, array, array>` inside) -> `Vector<array>`.
+     *
+     * @param list<array> $rows
+     */
+    private function coerceRows(array $rows, TypeInterface $type): Vector
     {
-        $coerced = Vec\map($rows, static fn(array $r): array => $type->coerce($r));
-
-        // direct turbofish construction => a genuine Vector (the static
-        // fromArray() factory would hand back Vector<mixed>).
-        return Vector::fromArray($coerced);
+        return Pipeline::from($rows)
+            ->map(static fn(array $r): array => $type->coerce($r))
+            ->toVector();
     }
 
     /**
-     * Word-frequency tally over the given rows' text — the same keyed-collection
-     * work the tag cloud does, exposed per route so every page exercises the
-     * scalar-checked generics. A native Map wrapped in Counts.
+     * Word-frequency tally built generically: flatten to words, then
+     * `Dict\group_by::<string, string>` + `Dict\map::<string, array, int>` with an
+     * `Iter\count::<string>` per bucket, wrapped in a native Counts<string>.
      *
      * @param list<array> $rows
      */
     public function digest(array $rows): Counts
     {
-        $counts = [];
+        $words = [];
         foreach ($rows as $r) {
             $text = strtolower((string) (($r['title'] ?? '') . ' ' . ($r['summary'] ?? '') . ' ' . ($r['content'] ?? '')));
             foreach (explode(' ', $text) as $w) {
                 $w = trim($w, " \t\r\n.,;:!?\"'()-");
-                if (strlen($w) < 4) {
-                    continue;
+                if (strlen($w) >= 4) {
+                    $words[] = $w;
                 }
-                $counts[$w] = ($counts[$w] ?? 0) + 1;
             }
         }
+
+        $grouped = Dict\group_by($words, static fn(string $w): string => $w);
+        $counts  = Dict\map($grouped, static fn(array $g): int => Iter\count($g));
 
         return new Counts(Map::fromArray($counts));
     }
@@ -80,7 +89,6 @@ final class Repository
              ORDER BY p.published_at DESC LIMIT ' . $perPage . ' OFFSET ' . $offset,
         )->fetchAll();
 
-        // turbofish so the page carries a genuine Vector
         $items = Vector::fromArray(Vec\map($rows, static fn(array $r): array => Types::post()->coerce($r)));
 
         return new Paginated($items, $total, $page, $perPage);
@@ -157,9 +165,8 @@ final class Repository
         )->fetchAll();
 
         $grouped = Dict\group_by($rows, static fn(array $r): string => $r['name']);
-        $counts = Dict\map($grouped, static fn(array $group): int => \Psl\Iter\count($group));
+        $counts  = Dict\map($grouped, static fn(array $group): int => Iter\count($group));
 
-        // a native Map wrapped in the generic Counts
         return new Counts(Map::fromArray($counts));
     }
 }

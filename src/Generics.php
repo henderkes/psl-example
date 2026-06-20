@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Blog;
 
+use Closure;
 use Psl\Collection\Map;
 use Psl\Collection\Vector;
+use Psl\Vec;
 
 /**
  * REGULAR variant: the exact shapes the generic branch declares with native
@@ -94,5 +96,67 @@ final class Counts
     public function toArray(): array
     {
         return $this->byKey->toArray();
+    }
+}
+
+/**
+ * A fluent transformation pipeline over a Vector. Same shape as the generic
+ * branch's Pipeline<T> / map<Tu>, but the type parameters are docblock-only and
+ * the underlying Vec\map/filter/sort are called without turbofish.
+ *
+ * @template T
+ */
+final class Pipeline
+{
+    /** @param Vector<T> $items */
+    public function __construct(
+        public readonly Vector $items,
+    ) {
+    }
+
+    /**
+     * @template Tf
+     * @param list<Tf> $values
+     * @return Pipeline<Tf>
+     */
+    public static function from(array $values): Pipeline
+    {
+        return new self(Vector::fromArray($values));
+    }
+
+    /**
+     * @template Tu
+     * @return Pipeline<Tu>
+     */
+    public function map(Closure $f): Pipeline
+    {
+        return new self(Vector::fromArray(Vec\map($this->items->toArray(), $f)));
+    }
+
+    public function filter(Closure $predicate): Pipeline
+    {
+        return new self(Vector::fromArray(Vec\filter($this->items->toArray(), $predicate)));
+    }
+
+    public function sort(Closure $comparator): Pipeline
+    {
+        return new self(Vector::fromArray(Vec\sort($this->items->toArray(), $comparator)));
+    }
+
+    /** @return Vector<T> */
+    public function toVector(): Vector
+    {
+        return $this->items;
+    }
+
+    /** @return list<T> */
+    public function toArray(): array
+    {
+        return $this->items->toArray();
+    }
+
+    public function count(): int
+    {
+        return $this->items->count();
     }
 }

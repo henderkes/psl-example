@@ -10,8 +10,8 @@ use Psl\Str;
 use Psl\Vec;
 
 /**
- * REGULAR variant of the view - structural mirror, docblock types only.
- * (`Vector`, `Map<string,int>`, `Listing`) so the engine enforces
+ * GENERIC variant of the view: method signatures use native generic types
+ * (`Vector<array>`, `Map<string,int>`, `Listing<array>`) so the engine enforces
  * the element types of the collections handed to the renderer.
  */
 final class View
