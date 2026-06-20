@@ -117,7 +117,7 @@ CSS;
 
     public static function home(Paginated<array> $page, Counts<string> $tagCloud): string
     {
-        $items = Vec\map($page->rows(), static function (array $p): string {
+        $items = Vec\map::<int, array, string>($page->rows(), static function (array $p): string {
             return Str\format(
                 "<article class=\"card\"><h2><a href=\"/post/%s\">%s</a></h2>"
                 . "<p class=\"meta\">by <b>%s</b> &middot; %s &middot; %d comments</p>"
@@ -158,14 +158,14 @@ CSS;
 
     public static function post(array $post, Vector<array> $comments, Vector<array> $tags, Counts<string> $digest): string
     {
-        $tagLinks = Vec\map($tags->toArray(), static fn(array $t): string => Str\format('<a href="/tag/%s">#%s</a>', self::escape($t['name']), self::escape($t['name'])));
+        $tagLinks = Vec\map::<int, array, string>($tags->toArray(), static fn(array $t): string => Str\format('<a href="/tag/%s">#%s</a>', self::escape($t['name']), self::escape($t['name'])));
 
-        $paragraphs = Vec\map(
+        $paragraphs = Vec\map::<int, string, string>(
             Str\split($post['content'], "\n\n"),
             static fn(string $para): string => '<p>' . self::escape($para) . '</p>',
         );
 
-        $commentHtml = Vec\map($comments->toArray(), static fn(array $c): string => Str\format(
+        $commentHtml = Vec\map::<int, array, string>($comments->toArray(), static fn(array $c): string => Str\format(
             "<li><strong>%s</strong> <span>%s</span><br>%s</li>",
             self::escape($c['author_name']),
             self::escape($c['published_at']),
@@ -190,7 +190,7 @@ CSS;
 
     public static function listing(Listing<array> $listing, Counts<string> $digest): string
     {
-        $items = Vec\map($listing->rows(), static fn(array $p): string => Str\format(
+        $items = Vec\map::<int, array, string>($listing->rows(), static fn(array $p): string => Str\format(
             "<li><a href=\"/post/%s\">%s</a> <span>&middot; by %s &middot; %d comments</span></li>",
             self::escape($p['slug']),
             self::escape($p['title']),
@@ -212,7 +212,7 @@ CSS;
 
     public static function apiPosts(Vector<array> $posts, Counts<string> $digest): string
     {
-        $data = Vec\map($posts->toArray(), static fn(array $p): array => [
+        $data = Vec\map::<int, array, array>($posts->toArray(), static fn(array $p): array => [
             'slug'     => $p['slug'],
             'title'    => $p['title'],
             'author'   => $p['author_name'],
