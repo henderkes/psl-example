@@ -13,6 +13,7 @@ const BLOG_VARIANT_LABEL = 'docblock PSL &middot; plain code';
 
 require __DIR__ . '/../vendor/autoload.php';
 
+require __DIR__ . '/Generics.php';
 require __DIR__ . '/Types.php';
 require __DIR__ . '/Repository.php';
 require __DIR__ . '/View.php';

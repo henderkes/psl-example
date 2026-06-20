@@ -48,16 +48,17 @@ final class Kernel
         $path = $request->path;
 
         if ($path === '/') {
-            $posts = $this->repo->recentPosts(20);
+            $page = $this->repo->recentPage(1, 20);
             $cloud = $this->repo->tagCloud();
 
-            return new Response(200, View::home($posts, $cloud));
+            return new Response(200, View::home($page, $cloud));
         }
 
         if ($path === '/api/posts') {
             $posts = $this->repo->recentPosts(50);
+            $digest = $this->repo->digest($posts->toArray());
 
-            return new Response(200, View::apiPosts($posts), 'application/json');
+            return new Response(200, View::apiPosts($posts, $digest), 'application/json');
         }
 
         if (Str\starts_with($path, '/post/')) {
@@ -67,8 +68,9 @@ final class Kernel
                 function (array $post): Response {
                     $comments = $this->repo->commentsFor($post['id']);
                     $tags = $this->repo->tagsFor($post['id']);
+                    $digest = $this->repo->digest($comments->toArray());
 
-                    return new Response(200, View::post($post, $comments, $tags));
+                    return new Response(200, View::post($post, $comments, $tags, $digest));
                 },
                 static fn(): Response => new Response(404, View::notFound($path)),
             );
@@ -76,9 +78,10 @@ final class Kernel
 
         if (Str\starts_with($path, '/tag/')) {
             $tag = Str\after($path, '/tag/') ?? '';
-            $posts = $this->repo->postsByTag($tag);
+            $listing = $this->repo->postsByTag($tag);
+            $digest = $this->repo->digest($listing->rows());
 
-            return new Response(200, View::list('Posts tagged #' . $tag, $posts));
+            return new Response(200, View::listing($listing, $digest));
         }
 
         if ($path === '/search') {
@@ -86,9 +89,10 @@ final class Kernel
             if ($request->query !== '' && Str\contains($request->query, 'q=')) {
                 $term = urldecode(Str\after($request->query, 'q=') ?? '');
             }
-            $posts = $this->repo->search($term);
+            $listing = $this->repo->search($term);
+            $digest = $this->repo->digest($listing->rows());
 
-            return new Response(200, View::list('Search: ' . $term, $posts));
+            return new Response(200, View::listing($listing, $digest));
         }
 
         return new Response(404, View::notFound($path));

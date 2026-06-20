@@ -10,8 +10,9 @@ use Psl\Str;
 use Psl\Vec;
 
 /**
- * Renders HTML/JSON. Uses PSL's Str / Vec functional helpers and iterates the
- * PSL collections returned by the repository.
+ * REGULAR variant of the view - structural mirror, docblock types only.
+ * (`Vector`, `Map<string,int>`, `Listing`) so the engine enforces
+ * the element types of the collections handed to the renderer.
  */
 final class View
 {
@@ -59,8 +60,7 @@ CSS;
 
     private static function layout(string $title, string $body, string $sidebar = ''): string
     {
-        $aside = $sidebar;
-        $columns = $aside === '' ? 'container single' : 'container';
+        $columns = $sidebar === '' ? 'container single' : 'container';
 
         return Str\format(
             "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">"
@@ -80,7 +80,7 @@ CSS;
             BLOG_VARIANT_LABEL,
             $columns,
             $body,
-            $aside,
+            $sidebar,
             BLOG_VARIANT_LABEL,
             PHP_VERSION,
         );
@@ -91,10 +91,33 @@ CSS;
         return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     }
 
-    /** @param Vector $posts coerced post rows */
-    public static function home(Vector $posts, Map $tagCloud): string
+    private static function date(string $ts): string
     {
-        $items = Vec\map($posts->toArray(), static function (array $p): string {
+        return Str\slice($ts, 0, 16);
+    }
+
+    /** Render a Counts digest (word => frequency) as a small box. */
+    private static function topics(Counts $digest): string
+    {
+        $parts = [];
+        $i = 0;
+        foreach ($digest->toArray() as $word => $n) {
+            $parts[] = self::escape((string) $word) . ' &middot; ' . $n;
+            if (++$i >= 10) {
+                break;
+            }
+        }
+
+        return Str\format(
+            '<div class="box"><h3>Topics &middot; %d</h3><p style="margin:0;color:#41525f;font-size:13px">%s</p></div>',
+            $digest->total(),
+            Str\join($parts, ', '),
+        );
+    }
+
+    public static function home(Paginated $page, Counts $tagCloud): string
+    {
+        $items = Vec\map($page->rows(), static function (array $p): string {
             return Str\format(
                 "<article class=\"card\"><h2><a href=\"/post/%s\">%s</a></h2>"
                 . "<p class=\"meta\">by <b>%s</b> &middot; %s &middot; %d comments</p>"
@@ -115,25 +138,25 @@ CSS;
 
         $sidebar = '<aside><div class="box"><h3>About</h3>'
             . '<p style="margin:0;color:#41525f">A Symfony-demo-style blog rendered entirely with '
-            . '<b>php-standard-library</b> — Type coercion, Collections, Option and Vec/Dict drive every page.</p></div>'
-            . '<div class="box"><h3>Tags</h3><div class="cloud">' . Str\join($cloudParts, ' ') . '</div></div></aside>';
+            . '<b>php-standard-library</b>. Every page flows through native generics: '
+            . 'Paginated&lt;array&gt;, Listing&lt;array&gt;, Counts&lt;string&gt; and PSL Vector/Map/Option.</p></div>'
+            . Str\format(
+                '<div class="box"><h3>Tags &middot; %d uses</h3><div class="cloud">%s</div></div></aside>',
+                $tagCloud->total(),
+                Str\join($cloudParts, ' '),
+            );
 
-        $body = '<h1>Recent posts</h1>' . Str\join($items, "\n");
+        $heading = Str\format(
+            '<h1>Recent posts</h1><p class="meta">page %d of %d &middot; %d posts total</p>',
+            $page->page,
+            $page->pages(),
+            $page->total,
+        );
 
-        return self::layout('Recent posts', $body, $sidebar);
+        return self::layout('Recent posts', $heading . Str\join($items, "\n"), $sidebar);
     }
 
-    private static function date(string $ts): string
-    {
-        return Str\slice($ts, 0, 16);
-    }
-
-    /**
-     * @param array  $post     coerced post row
-     * @param Vector $comments coerced comment rows
-     * @param Vector $tags     coerced tag rows
-     */
-    public static function post(array $post, Vector $comments, Vector $tags): string
+    public static function post(array $post, Vector $comments, Vector $tags, Counts $digest): string
     {
         $tagLinks = Vec\map($tags->toArray(), static fn(array $t): string => Str\format('<a href="/tag/%s">#%s</a>', self::escape($t['name']), self::escape($t['name'])));
 
@@ -142,14 +165,12 @@ CSS;
             static fn(string $para): string => '<p>' . self::escape($para) . '</p>',
         );
 
-        $commentHtml = Vec\map($comments->toArray(), static function (array $c): string {
-            return Str\format(
-                "<li><strong>%s</strong> <span>%s</span><br>%s</li>",
-                self::escape($c['author_name']),
-                self::escape($c['published_at']),
-                self::escape($c['content']),
-            );
-        });
+        $commentHtml = Vec\map($comments->toArray(), static fn(array $c): string => Str\format(
+            "<li><strong>%s</strong> <span>%s</span><br>%s</li>",
+            self::escape($c['author_name']),
+            self::escape($c['published_at']),
+            self::escape($c['content']),
+        ));
 
         $body = Str\format(
             "<article class=\"post\"><h1>%s</h1><p class=\"meta\">by <b>%s</b> &middot; %s</p>\n"
@@ -164,13 +185,12 @@ CSS;
             Str\join($commentHtml, "\n"),
         );
 
-        return self::layout($post['title'], $body);
+        return self::layout($post['title'], $body, '<aside>' . self::topics($digest) . '</aside>');
     }
 
-    /** @param Vector $posts coerced post rows */
-    public static function list(string $heading, Vector $posts): string
+    public static function listing(Listing $listing, Counts $digest): string
     {
-        $items = Vec\map($posts->toArray(), static fn(array $p): string => Str\format(
+        $items = Vec\map($listing->rows(), static fn(array $p): string => Str\format(
             "<li><a href=\"/post/%s\">%s</a> <span>&middot; by %s &middot; %d comments</span></li>",
             self::escape($p['slug']),
             self::escape($p['title']),
@@ -178,20 +198,19 @@ CSS;
             $p['comment_count'],
         ));
 
-        $count = $posts->count();
+        $count = $listing->count();
         $body = Str\format(
             "<h1>%s</h1><p class=\"meta\">%d post%s</p><ul class=\"list\">%s</ul>",
-            self::escape($heading),
+            self::escape($listing->heading),
             $count,
             $count === 1 ? '' : 's',
             Str\join($items, "\n"),
         );
 
-        return self::layout($heading, $body);
+        return self::layout($listing->heading, $body, '<aside>' . self::topics($digest) . '</aside>');
     }
 
-    /** @param Vector $posts coerced post rows */
-    public static function apiPosts(Vector $posts): string
+    public static function apiPosts(Vector $posts, Counts $digest): string
     {
         $data = Vec\map($posts->toArray(), static fn(array $p): array => [
             'slug'     => $p['slug'],
@@ -200,7 +219,11 @@ CSS;
             'comments' => $p['comment_count'],
         ]);
 
-        return \Psl\Json\encode(['posts' => $data, 'count' => $posts->count()]);
+        return \Psl\Json\encode([
+            'posts'  => $data,
+            'count'  => $posts->count(),
+            'topics' => $digest->total(),
+        ]);
     }
 
     public static function notFound(string $path): string
