@@ -12,7 +12,7 @@
         "php": ">=8.4",
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
-        "php-standard-library/php-standard-library": "dev-reified-generics#"
+        "php-standard-library/php-standard-library": "dev-reified-generics#cb133f13ba49dc3d768ebcf4bb9cfd4acc51f70e"
     },
     "config": {
         "platform": { "php": "8.5.0" },
