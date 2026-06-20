@@ -96,6 +96,25 @@ CSS;
         return Str\slice($ts, 0, 16);
     }
 
+    /** Render a Counts<string> digest (word => frequency) as a small box. */
+    private static function topics(Counts<string> $digest): string
+    {
+        $parts = [];
+        $i = 0;
+        foreach ($digest->toArray() as $word => $n) {
+            $parts[] = self::escape((string) $word) . ' &middot; ' . $n;
+            if (++$i >= 10) {
+                break;
+            }
+        }
+
+        return Str\format(
+            '<div class="box"><h3>Topics &middot; %d</h3><p style="margin:0;color:#41525f;font-size:13px">%s</p></div>',
+            $digest->total(),
+            Str\join($parts, ', '),
+        );
+    }
+
     public static function home(Paginated<array> $page, Counts<string> $tagCloud): string
     {
         $items = Vec\map($page->rows(), static function (array $p): string {
@@ -137,7 +156,7 @@ CSS;
         return self::layout('Recent posts', $heading . Str\join($items, "\n"), $sidebar);
     }
 
-    public static function post(array $post, Vector<array> $comments, Vector<array> $tags): string
+    public static function post(array $post, Vector<array> $comments, Vector<array> $tags, Counts<string> $digest): string
     {
         $tagLinks = Vec\map($tags->toArray(), static fn(array $t): string => Str\format('<a href="/tag/%s">#%s</a>', self::escape($t['name']), self::escape($t['name'])));
 
@@ -166,10 +185,10 @@ CSS;
             Str\join($commentHtml, "\n"),
         );
 
-        return self::layout($post['title'], $body);
+        return self::layout($post['title'], $body, '<aside>' . self::topics($digest) . '</aside>');
     }
 
-    public static function listing(Listing<array> $listing): string
+    public static function listing(Listing<array> $listing, Counts<string> $digest): string
     {
         $items = Vec\map($listing->rows(), static fn(array $p): string => Str\format(
             "<li><a href=\"/post/%s\">%s</a> <span>&middot; by %s &middot; %d comments</span></li>",
@@ -188,10 +207,10 @@ CSS;
             Str\join($items, "\n"),
         );
 
-        return self::layout($listing->heading, $body);
+        return self::layout($listing->heading, $body, '<aside>' . self::topics($digest) . '</aside>');
     }
 
-    public static function apiPosts(Vector<array> $posts): string
+    public static function apiPosts(Vector<array> $posts, Counts<string> $digest): string
     {
         $data = Vec\map($posts->toArray(), static fn(array $p): array => [
             'slug'     => $p['slug'],
@@ -200,7 +219,11 @@ CSS;
             'comments' => $p['comment_count'],
         ]);
 
-        return \Psl\Json\encode(['posts' => $data, 'count' => $posts->count()]);
+        return \Psl\Json\encode([
+            'posts'  => $data,
+            'count'  => $posts->count(),
+            'topics' => $digest->total(),
+        ]);
     }
 
     public static function notFound(string $path): string

@@ -33,6 +33,30 @@ final class Repository
         return new Vector::<array>($coerced);
     }
 
+    /**
+     * Word-frequency tally over the given rows' text — the same keyed-collection
+     * work the tag cloud does, exposed per route so every page exercises the
+     * scalar-checked generics. A native Map<string,int> wrapped in Counts<string>.
+     *
+     * @param list<array> $rows
+     */
+    public function digest(array $rows): Counts<string>
+    {
+        $counts = [];
+        foreach ($rows as $r) {
+            $text = strtolower((string) (($r['title'] ?? '') . ' ' . ($r['summary'] ?? '') . ' ' . ($r['content'] ?? '')));
+            foreach (explode(' ', $text) as $w) {
+                $w = trim($w, " \t\r\n.,;:!?\"'()-");
+                if (strlen($w) < 4) {
+                    continue;
+                }
+                $counts[$w] = ($counts[$w] ?? 0) + 1;
+            }
+        }
+
+        return new Counts::<string>(new Map::<string, int>($counts));
+    }
+
     public function recentPosts(int $limit = 20): Vector<array>
     {
         $rows = $this->pdo->query(
