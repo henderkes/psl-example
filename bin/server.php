@@ -34,7 +34,7 @@ Async\main(static function () use ($host, $port): int {
         $connection = $listener->accept();
 
         // Handle each connection concurrently on the event loop.
-        Async\run(static function () use ($connection, $kernel): void {
+        Async\run::<null>(static function () use ($connection, $kernel): void {
             try {
                 $raw = $connection->read();
                 if ($raw === '') {
