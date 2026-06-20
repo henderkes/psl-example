@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ad998b8c99b61b433fbe845ca5e800b6",
+    "content-hash": "9c2ecc48c6755398f06b3675c0fc547f",
     "packages": [
         {
             "name": "php-standard-library/php-standard-library",
@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/henderkes/php-standard-library.git",
-                "reference": "076034a86fb616ac16c2b81f655b2a3c9d5b6f87"
+                "reference": "cb133f13ba49dc3d768ebcf4bb9cfd4acc51f70e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/henderkes/php-standard-library/zipball/076034a86fb616ac16c2b81f655b2a3c9d5b6f87",
-                "reference": "076034a86fb616ac16c2b81f655b2a3c9d5b6f87",
+                "url": "https://api.github.com/repos/henderkes/php-standard-library/zipball/cb133f13ba49dc3d768ebcf4bb9cfd4acc51f70e",
+                "reference": "cb133f13ba49dc3d768ebcf4bb9cfd4acc51f70e",
                 "shasum": ""
             },
             "require": {
@@ -404,7 +404,7 @@
                     "url": "https://github.com/veewee"
                 }
             ],
-            "time": "2026-06-20T00:35:59+00:00"
+            "time": "2026-06-20T00:55:02+00:00"
         },
         {
             "name": "revolt/event-loop",
